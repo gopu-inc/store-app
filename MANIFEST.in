@@ -1,0 +1,5 @@
+include README.md
+include LICENSE
+recursive-include store/styles *.tcss
+recursive-include store/screens *.py
+recursive-include store/widgets *.py

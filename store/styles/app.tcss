@@ -1,0 +1,238 @@
+/* styles/app.tcss */
+/* StoreApp.TUI - Styles */
+
+App {
+    background: $surface;
+}
+
+Header {
+    background: $primary;
+    color: $text;
+    height: 3;
+}
+
+Header Label {
+    text-style: bold;
+}
+
+Footer {
+    background: $panel;
+    color: $text;
+    height: 3;
+}
+
+Button {
+    margin: 1;
+    padding: 1 2;
+}
+
+Button.primary {
+    background: $primary;
+}
+
+Button.success {
+    background: $success;
+}
+
+Button.warning {
+    background: $warning;
+}
+
+Button.error {
+    background: $error;
+}
+
+Container {
+    padding: 1;
+}
+
+Horizontal {
+    padding: 0 1;
+}
+
+Vertical {
+    padding: 0 1;
+}
+
+Grid {
+    padding: 1;
+}
+
+Label.title {
+    text-style: bold;
+    color: $primary;
+    text-align: center;
+}
+
+Label.subtitle {
+    color: $text-muted;
+    text-align: center;
+    padding: 1;
+}
+
+Input:focus {
+    border: solid $primary;
+}
+
+ListView {
+    background: $panel;
+}
+
+ListItem {
+    padding: 1;
+}
+
+ListItem:hover {
+    background: $primary-darken-1;
+}
+
+/* Login */
+#login-box {
+    width: 50;
+    height: auto;
+    border: solid $primary;
+    padding: 2 3;
+    background: $surface;
+}
+
+/* Home */
+#featured-grid {
+    grid-size: 3;
+    grid-gutter: 1 1;
+    margin: 1 1;
+    height: 8;
+}
+
+#featured-grid > Static {
+    border: solid $secondary;
+    padding: 1;
+    background: $panel;
+    text-align: center;
+}
+
+#app-list {
+    height: 1fr;
+    margin: 1;
+    border: solid $secondary;
+}
+
+#app-list ListItem {
+    padding: 1;
+    border-bottom: solid $panel;
+}
+
+/* Browse */
+#browse-header, #publish-header, #detail-header {
+    height: 3;
+    border-bottom: solid $primary;
+    padding: 0 1;
+    background: $panel;
+}
+
+#search-box {
+    height: 3;
+    margin: 1;
+}
+
+#search-box > Input {
+    width: 1fr;
+    margin: 0 1;
+}
+
+#search-box > Button {
+    width: 15;
+}
+
+#browse-list {
+    height: 1fr;
+    margin: 1;
+    border: solid $secondary;
+}
+
+#browse-list ListItem {
+    padding: 1;
+    border-bottom: solid $panel;
+}
+
+#browse-actions {
+    height: 3;
+    padding: 0 1;
+}
+
+#browse-actions > Button {
+    margin: 0 1;
+    width: 15;
+}
+
+/* Detail */
+#detail-content {
+    height: 1fr;
+    margin: 1;
+    padding: 1;
+    border: solid $secondary;
+    overflow-y: auto;
+}
+
+#detail-content > Label {
+    padding: 1;
+}
+
+#detail-actions {
+    height: 3;
+    padding: 0 1;
+}
+
+#detail-actions > Button {
+    margin: 0 1;
+    width: 15;
+}
+
+/* Publish */
+#publish-content {
+    height: 1fr;
+    margin: 1;
+    padding: 2;
+    border: solid $secondary;
+}
+
+#publish-content > Label {
+    padding: 1 0;
+}
+
+#publish-content > Input {
+    margin: 1 0;
+}
+
+#publish-actions {
+    height: 3;
+    padding: 0 1;
+}
+
+#publish-actions > Button {
+    margin: 0 1;
+    width: 15;
+}
+
+/* Status */
+.status {
+    color: $text-muted;
+    text-align: right;
+    padding: 0 1;
+}
+
+#error {
+    color: $error;
+    text-align: center;
+    height: 3;
+}
+
+#status {
+    color: $success;
+    text-align: center;
+    height: 3;
+}
+
+#file-info {
+    color: $success;
+    padding: 1 0;
+}
