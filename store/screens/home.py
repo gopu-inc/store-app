@@ -137,8 +137,10 @@ class HomeScreen(Screen):
                 widget = self.query_one(f"#featured-{i}")
                 name = app.get('name', 'App')
                 rating = app.get('rating', 0)
-                widget.update(f"📦 {name}\n⭐ {rating}")
-        except:
+                env = app.get('environnement', 'python')
+                widget.update(f"📦 {name}\n⭐ {rating}  🐍 {env}")
+       
+        except:  
             pass
     
     def load_apps(self) -> None:
