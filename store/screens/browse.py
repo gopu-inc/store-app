@@ -122,6 +122,22 @@ class BrowseScreen(Screen):
                 self.query_one("#status").update("📭 Aucune application")
         except Exception as e:
             self.query_one("#status").update(f"❌ Erreur: {e}")
+
+    def create_app_item(self, app_data):
+        class AppListItem(ListItem):
+            def __init__(self, data):
+                super().__init__()
+                self.app_data = data
+                def render(self):
+                    name = self.app_data.get('name', 'Inconnu')
+                    version = self.app_data.get('version', '')
+                    author = self.app_data.get('author', '')
+                    rating = self.app_data.get('rating', 0)
+                    downloads = self.app_data.get('downloads', 0)
+                    stars = "⭐" * int(rating) + "☆" * (5 - int(rating))
+                    return f"📦 {name} v{version}\n  ✍️ {author}  {stars} {rating}  👥 {downloads}"
+    
+    return AppListItem(app_data)
     
     def search_apps(self) -> None:
         """Recherche des applications"""
