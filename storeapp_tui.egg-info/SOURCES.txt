@@ -2,10 +2,17 @@ LICENSE
 MANIFEST.in
 setup.py
 store/__init__.py
+store/agent_cli.py
 store/api.py
 store/app.py
 store/config.py
 store/store.py
+store/agent/__init__.py
+store/agent/builder.py
+store/agent/commands.py
+store/agent/core.py
+store/agent/metadata.py
+store/agent/supervisor.py
 store/screens/__init__.py
 store/screens/browse.py
 store/screens/detail.py
@@ -14,6 +21,7 @@ store/screens/login.py
 store/screens/publish.py
 store/styles/app.tcss
 store/widgets/__init__.py
+store/widgets/rating_dialog.py
 storeapp_tui.egg-info/PKG-INFO
 storeapp_tui.egg-info/SOURCES.txt
 storeapp_tui.egg-info/dependency_links.txt

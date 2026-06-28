@@ -1,2 +1,3 @@
 [console_scripts]
+agent = store.agent_cli:main
 store = store.store:main

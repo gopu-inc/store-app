@@ -36,6 +36,7 @@ setup(
     entry_points={
         "console_scripts": [
             "store = store.store:main",
+            "agent = store.agent_cli:main",
         ],
     },
     classifiers=[

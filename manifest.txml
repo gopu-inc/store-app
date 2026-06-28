@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<app>
+    <name>browser Reach</name>
+    <version>1.0.0</version>
+    <author>Mauricio</author>
+    <bundle>com.browse.app</bundle>
+    <description>Application créée avec StoreApp.TUI</description>
+    <entrypoint>app.main:App</entrypoint>
+    <license>MIT</license>
+    
+    <permissions>
+        <permission>notifications</permission>
+        <permission>location</permission>
+    </permissions>
+    
+    <dependencies>
+        <dependency>textual>=0.50.0</dependency>
+        <dependency>rich>=13.0.0</dependency>
+    </dependencies>
+</app>
