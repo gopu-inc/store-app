@@ -1,5 +1,5 @@
 # agent/core.py
-"""Agent principal de build"""
+"""Agent principal de build avec support multi-environnements"""
 
 import os
 import json
@@ -51,9 +51,12 @@ class Agent:
         
         self.state["initialized"] = True
     
-    def init_project(self, name: str, author: str, bundle: str) -> bool:
-        """Initialise un nouveau projet"""
-        return self.metadata.create(name, author, bundle)
+    def init_project(self, name: str, author: str, bundle: str, environnement: str = "python") -> bool:
+        """Initialise un nouveau projet avec environnement spécifié"""
+        result = self.metadata.create(name, author, bundle, environnement)
+        if result:
+            self.state["project_loaded"] = True
+        return result
     
     def build(self, output_dir: Optional[str] = None) -> Dict[str, Any]:
         """Build le package"""
@@ -70,67 +73,13 @@ class Agent:
         
         if result.get("success"):
             self.state["last_build"] = datetime.now().isoformat()
+            # Mettre à jour le lock
+            self.metadata.update_lock(metadata)
             print(f"✅ Build réussi: {result.get('output_path')}")
         else:
             print(f"❌ Build échoué: {result.get('error')}")
         
         return result
-    def list_environments(self) -> List[str]:
-    """Liste les environnements supportés"""
-    return self.metadata.get_supported_environments()
-    def set_environment(self, env: str) -> bool:
-        """Définit l'environnement du projet"""
-        if env not in self.metadata.SUPPORTED_ENVIRONMENTS:
-            print(f"❌ Environnement non supporté: {env}")
-            print(f"📋 Supportés: {', '.join(self.metadata.get_supported_environments())}")
-            return False
-            metadata = self.metadata.load()
-            if not metadata:
-                print("❌ Métadonnées non trouvées")
-                return False
-                env_config = self.metadata.SUPPORTED_ENVIRONMENTS[env]
-                metadata["environnement"] = env
-                metadata["gestionnaire"] = env_config["gestionnaire"]
-                try:
-                    import xml.etree.ElementTree as ET
-                    from xml.dom import minidom
-                    root = ET.Element("app")
-                    fields = [
-                        "name", "version", "author", "bundle", "description", 
-                        "entrypoint", "license", "app-path", "environnement", 
-                        "gestionnaire", "lock-cash-path", "app-run"
-                    ]
-                    for field in fields:
-                        if field in metadata:
-                            elem = ET.SubElement(root, field.replace("-", ""))
-                            elem.text = metadata[field]
-                            deps_elem = ET.SubElement(root, "dependencies")
-                            for dep in metadata.get("dependencies", []):
-                                dep_elem = ET.SubElement(deps_elem, "dependency")
-                                dep_elem.text = dep
-                                perms_elem = ET.SubElement(root, "permissions")
-                                for perm in metadata.get("permissions", []):
-                                    perm_elem = ET.SubElement(perms_elem, "permission")
-                                    perm_elem.text = perm
-                                    if "compiler" in metadata and metadata["compiler"]:
-                                        compiler_elem = ET.SubElement(root, "compiler")
-                                        for key, value in metadata["compiler"].items():
-                                            comp_elem = ET.SubElement(compiler_elem, key)
-                                            comp_elem.text = str(value)
-                                            rough_string = ET.tostring(root, encoding='utf-8')
-                                            reparsed = minidom.parseString(rough_string)
-                                            xml_str = reparsed.toprettyxml(indent="    ")
-                                            if xml_str.startswith('<?xml'):
-                                                xml_str = xml_str.split('\n', 1)[1]
-                                                self.metadata.manifest_path.write_text(xml_str)
-                                                self.metadata.update_lock(metadata)
-                                                print(f"✅ Environnement défini sur: {env}")
-                                                print(f"📦 Gestionnaire: {env_config['gestionnaire']}")
-                                                return True
-                except Exception as e:
-                    print(f"❌ Erreur lors de la mise à jour du manifest: {e}")
-                    return False
-                    
     
     def publish(self, token: str) -> Dict[str, Any]:
         """Publie le package sur StoreApp.TUI"""
@@ -172,6 +121,8 @@ class Agent:
     def status(self) -> Dict[str, Any]:
         """Retourne le statut de l'agent"""
         metadata = self.metadata.load()
+        lock_data = self.metadata.get_lock_data()
+        
         return {
             "agent": {
                 "name": self.NAME,
@@ -181,9 +132,101 @@ class Agent:
             "project": {
                 "initialized": self.metadata.exists(),
                 "metadata": metadata
-            }
+            },
+            "lock": lock_data
         }
     
     def run_command(self, cmd: str, args: List[str]) -> bool:
         """Exécute une commande de l'agent"""
         return self.commands.execute(cmd, args, self)
+    
+    def list_environments(self) -> List[str]:
+        """Liste les environnements supportés"""
+        return self.metadata.get_supported_environments()
+    
+    def set_environment(self, env: str) -> bool:
+        """Définit l'environnement du projet"""
+        if env not in self.metadata.SUPPORTED_ENVIRONMENTS:
+            print(f"❌ Environnement non supporté: {env}")
+            print(f"📋 Supportés: {', '.join(self.metadata.get_supported_environments())}")
+            return False
+        
+        # Charger les métadonnées
+        metadata = self.metadata.load()
+        if not metadata:
+            print("❌ Métadonnées non trouvées")
+            return False
+        
+        # Mettre à jour
+        env_config = self.metadata.SUPPORTED_ENVIRONMENTS[env]
+        metadata["environnement"] = env
+        metadata["gestionnaire"] = env_config["gestionnaire"]
+        
+        # Réécrire le manifest XML
+        try:
+            import xml.etree.ElementTree as ET
+            from xml.dom import minidom
+            
+            # Créer la structure XML
+            root = ET.Element("app")
+            
+            # Ajouter tous les champs
+            fields = [
+                "name", "version", "author", "bundle", "description", 
+                "entrypoint", "license", "app-path", "environnement", 
+                "gestionnaire", "lock-cash-path", "app-run"
+            ]
+            
+            for field in fields:
+                if field in metadata:
+                    elem = ET.SubElement(root, field.replace("-", ""))
+                    elem.text = metadata[field]
+            
+            # Ajouter les dépendances
+            deps_elem = ET.SubElement(root, "dependencies")
+            for dep in metadata.get("dependencies", []):
+                dep_elem = ET.SubElement(deps_elem, "dependency")
+                dep_elem.text = dep
+            
+            # Ajouter les permissions
+            perms_elem = ET.SubElement(root, "permissions")
+            for perm in metadata.get("permissions", []):
+                perm_elem = ET.SubElement(perms_elem, "permission")
+                perm_elem.text = perm
+            
+            # Ajouter le compilateur si présent
+            if "compiler" in metadata and metadata["compiler"]:
+                compiler_elem = ET.SubElement(root, "compiler")
+                for key, value in metadata["compiler"].items():
+                    comp_elem = ET.SubElement(compiler_elem, key)
+                    comp_elem.text = str(value)
+            
+            # Convertir en string avec formatage
+            rough_string = ET.tostring(root, encoding='utf-8')
+            reparsed = minidom.parseString(rough_string)
+            xml_str = reparsed.toprettyxml(indent="    ")
+            
+            # Enlever la première ligne (<?xml version="1.0" ?>)
+            if xml_str.startswith('<?xml'):
+                xml_str = xml_str.split('\n', 1)[1]
+            
+            # Écrire le fichier
+            self.metadata.manifest_path.write_text(xml_str)
+            
+            # Mettre à jour le lock
+            self.metadata.update_lock(metadata)
+            
+            print(f"✅ Environnement défini sur: {env}")
+            print(f"📦 Gestionnaire: {env_config['gestionnaire']}")
+            return True
+            
+        except Exception as e:
+            print(f"❌ Erreur lors de la mise à jour du manifest: {e}")
+            return False
+    
+    def get_environment(self) -> Optional[str]:
+        """Retourne l'environnement actuel"""
+        metadata = self.metadata.load()
+        if metadata:
+            return metadata.get("environnement", "python")
+        return None
