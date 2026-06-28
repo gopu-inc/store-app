@@ -75,7 +75,23 @@ class Agent:
             print(f"❌ Build échoué: {result.get('error')}")
         
         return result
-    
+    def list_environments(self) -> List[str]:
+    """Liste les environnements supportés"""
+    return self.metadata.get_supported_environments()
+    def set_environment(self, env: str) -> bool:
+        """Définit l'environnement du projet"""
+        if env not in self.metadata.SUPPORTED_ENVIRONMENTS:
+            print(f"❌ Environnement non supporté: {env}")
+            print(f"📋 Supportés: {', '.join(self.metadata.get_supported_environments())}")
+            return False
+            metadata = self.metadata.load()
+            if not metadata:
+                print("❌ Métadonnées non trouvées")
+                return False
+                metadata["environnement"] = env
+                metadata["gestionnaire"] = self.metadata.SUPPORTED_ENVIRONMENTS[env]["gestionnaire"]
+                print(f"✅ Environnement défini sur: {env}")
+                return True
     def publish(self, token: str) -> Dict[str, Any]:
         """Publie le package sur StoreApp.TUI"""
         print("📤 Publication en cours...")
