@@ -3,10 +3,12 @@
 
 from textual.app import ComposeResult
 from textual.screen import Screen
-from textual.widgets import Label, Static, Button, TextArea, LoadingIndicator
+from textual.widgets import Label, Static, Button, Input
 from textual.containers import Horizontal, Vertical, Container
 from textual import events
 from pathlib import Path
+
+from store.widgets.rating_dialog import RatingDialog
 
 class DetailScreen(Screen):
     """Écran de détail d'une application"""
@@ -45,7 +47,7 @@ class DetailScreen(Screen):
         width: 15;
     }
     
-    #rating-input {
+    #detail-actions > Input {
         width: 10;
         margin: 0 1;
     }
@@ -71,6 +73,7 @@ class DetailScreen(Screen):
             yield Label("", id="app-description")
             yield Label("---", id="readme-sep")
             yield Static("", id="app-readme")
+            yield Label("", id="user-rating")
         
         with Horizontal(id="detail-actions"):
             yield Button("⬇️ Télécharger", id="download-btn", variant="primary")
@@ -103,9 +106,19 @@ class DetailScreen(Screen):
                 self.query_one("#app-name").update(f"📦 {metadata.get('name', 'Inconnu')}")
                 self.query_one("#app-version").update(f"Version: {metadata.get('version', '')}")
                 self.query_one("#app-author").update(f"Auteur: {metadata.get('author', '')}")
-                self.query_one("#app-rating").update(f"⭐ {metadata.get('rating', 0)} ({metadata.get('rating_count', 0)} notes)")
+                
+                rating = metadata.get('rating', 0)
+                rating_count = metadata.get('rating_count', 0)
+                stars = "⭐" * int(rating) + "☆" * (5 - int(rating))
+                self.query_one("#app-rating").update(f"{stars} {rating} ({rating_count} notes)")
+                
                 self.query_one("#app-downloads").update(f"👥 {metadata.get('downloads', 0)} téléchargements")
                 self.query_one("#app-description").update(f"📝 {metadata.get('description', '')}")
+                
+                # Afficher la note de l'utilisateur si connecté
+                user_rating = self.get_user_rating(data.get('ratings', []))
+                if user_rating:
+                    self.query_one("#user-rating").update(f"✅ Vous avez noté: {'⭐' * user_rating}")
                 
                 readme = data.get('readme', '')
                 if readme:
@@ -118,6 +131,17 @@ class DetailScreen(Screen):
                 self.query_one("#status").update("❌ Application non trouvée")
         except Exception as e:
             self.query_one("#status").update(f"❌ Erreur: {e}")
+    
+    def get_user_rating(self, ratings: list) -> int:
+        """Récupère la note de l'utilisateur connecté"""
+        if not self.app.api.token:
+            return 0
+        
+        username = self.app.api.username
+        for r in ratings:
+            if r.get('username') == username:
+                return r.get('rating', 0)
+        return 0
     
     def download_app(self) -> None:
         """Télécharge l'application"""
@@ -134,10 +158,31 @@ class DetailScreen(Screen):
             if self.app.api.download(bundle, output_path):
                 self.query_one("#status").update(f"✅ Téléchargé: {output_path}")
             else:
-                self.query_one("#status").update("[X] Échec du téléchargement")
+                self.query_one("#status").update("❌ Échec du téléchargement")
         except Exception as e:
-            self.query_one("#status").update(f"[X] Erreur: {e}")
+            self.query_one("#status").update(f"❌ Erreur: {e}")
     
     def show_rating_dialog(self) -> None:
         """Affiche la boîte de dialogue de notation"""
-        self.query_one("#status").update("⭐ Fonctionnalité à implémenter")
+        if not self.app.api.token:
+            self.query_one("#status").update("⚠️ Connectez-vous pour noter")
+            return
+        
+        bundle = self.app.current_app
+        if not bundle:
+            return
+        
+        metadata = self.app.api.get_app(bundle)
+        if not metadata:
+            return
+        
+        app_name = metadata.get('metadata', {}).get('name', 'Application')
+        
+        def on_rating_dismissed(result):
+            if result:
+                self.query_one("#status").update(f"✅ Note envoyée !")
+                self.load_detail()  # Recharger les détails
+            else:
+                self.query_one("#status").update("❌ Notation annulée")
+        
+        self.app.push_screen(RatingDialog(bundle, app_name), on_rating_dismissed)

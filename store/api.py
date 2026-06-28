@@ -139,26 +139,8 @@ class StoreAPI:
         except:
             pass
         return False
-    
-    def rate(self, bundle: str, rating: int, comment: str = None) -> bool:
-        """Note une application"""
-        if not self.token:
-            return False
-        
-        try:
-            data = {"token": self.token, "rating": rating}
-            if comment:
-                data["comment"] = comment
-            response = requests.post(
-                f"{self.base_url}/rate/{bundle}",
-                data=data,
-                timeout=10
-            )
-            return response.status_code == 200
-        except:
-            pass
-        return False
-    
+)
+
     def comment(self, bundle: str, content: str) -> bool:
         """Commente une application"""
         if not self.token:
