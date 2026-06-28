@@ -1,9 +1,10 @@
 # api.py
-"""Client API pour StoreApp.TUI"""
+"""Client API pour StoreApp.TUI avec support multi-environnements"""
 
 import requests
 from typing import Optional, Dict, List, Any
 from pathlib import Path
+import xml.etree.ElementTree as ET
 
 class StoreAPI:
     """Client pour l'API StoreApp.TUI"""
@@ -64,10 +65,43 @@ class StoreAPI:
         return []
     
     def get_app(self, bundle: str) -> Optional[Dict]:
-        """Récupère les détails d'une application"""
+        """Récupère les détails d'une application avec métadonnées complètes"""
         try:
             response = requests.get(
                 f"{self.base_url}/apps/{bundle}",
+                timeout=10
+            )
+            if response.status_code == 200:
+                data = response.json()
+                # Enrichir avec les métadonnées du manifest
+                if data.get('metadata'):
+                    # Récupérer le manifest pour les détails d'environnement
+                    manifest = self.get_manifest(bundle)
+                    if manifest:
+                        data['manifest'] = manifest
+                return data
+        except:
+            pass
+        return None
+    
+    def get_manifest(self, bundle: str) -> Optional[Dict]:
+        """Récupère le manifest.txml d'une application"""
+        try:
+            response = requests.get(
+                f"{self.base_url}/apps/{bundle}/manifest",
+                timeout=10
+            )
+            if response.status_code == 200:
+                return response.json()
+        except:
+            pass
+        return None
+    
+    def get_lock(self, bundle: str) -> Optional[Dict]:
+        """Récupère le cache.lock.txml d'une application"""
+        try:
+            response = requests.get(
+                f"{self.base_url}/apps/{bundle}/lock",
                 timeout=10
             )
             if response.status_code == 200:
@@ -139,37 +173,46 @@ class StoreAPI:
         except:
             pass
         return False
-
+    
     def rate(self, bundle: str, rating: int, comment: str = None) -> bool:
+        """Note une application"""
         if not self.token:
             return False
-            try:
-                data = {
-                    "token": self.token,
-                    "rating": rating
-                }
-                if comment:
-                    data["comment"] = comment
-                    response = requests.post(
-                        f"{self.base_url}/rate/{bundle}",
-                        data=data,
-                        timeout=10
-                    )
-                    return response.status_code == 200
-            except Exception as e:
-                print(f"❌ Rate error: {e}")
-                return False
-
+        
+        try:
+            headers = {
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {self.token}"
+            }
+            data = {"rating": rating}
+            if comment:
+                data["comment"] = comment
+            
+            response = requests.post(
+                f"{self.base_url}/rate/{bundle}",
+                json=data,
+                headers=headers,
+                timeout=10
+            )
+            return response.status_code == 200
+        except:
+            pass
+        return False
+    
     def comment(self, bundle: str, content: str) -> bool:
         """Commente une application"""
         if not self.token:
             return False
         
         try:
-            data = {"token": self.token, "content": content}
+            headers = {
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {self.token}"
+            }
             response = requests.post(
                 f"{self.base_url}/comment/{bundle}",
-                data=data,
+                json={"content": content},
+                headers=headers,
                 timeout=10
             )
             return response.status_code == 200
