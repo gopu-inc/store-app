@@ -88,10 +88,50 @@ class Agent:
             if not metadata:
                 print("❌ Métadonnées non trouvées")
                 return False
+                env_config = self.metadata.SUPPORTED_ENVIRONMENTS[env]
                 metadata["environnement"] = env
-                metadata["gestionnaire"] = self.metadata.SUPPORTED_ENVIRONMENTS[env]["gestionnaire"]
-                print(f"✅ Environnement défini sur: {env}")
-                return True
+                metadata["gestionnaire"] = env_config["gestionnaire"]
+                try:
+                    import xml.etree.ElementTree as ET
+                    from xml.dom import minidom
+                    root = ET.Element("app")
+                    fields = [
+                        "name", "version", "author", "bundle", "description", 
+                        "entrypoint", "license", "app-path", "environnement", 
+                        "gestionnaire", "lock-cash-path", "app-run"
+                    ]
+                    for field in fields:
+                        if field in metadata:
+                            elem = ET.SubElement(root, field.replace("-", ""))
+                            elem.text = metadata[field]
+                            deps_elem = ET.SubElement(root, "dependencies")
+                            for dep in metadata.get("dependencies", []):
+                                dep_elem = ET.SubElement(deps_elem, "dependency")
+                                dep_elem.text = dep
+                                perms_elem = ET.SubElement(root, "permissions")
+                                for perm in metadata.get("permissions", []):
+                                    perm_elem = ET.SubElement(perms_elem, "permission")
+                                    perm_elem.text = perm
+                                    if "compiler" in metadata and metadata["compiler"]:
+                                        compiler_elem = ET.SubElement(root, "compiler")
+                                        for key, value in metadata["compiler"].items():
+                                            comp_elem = ET.SubElement(compiler_elem, key)
+                                            comp_elem.text = str(value)
+                                            rough_string = ET.tostring(root, encoding='utf-8')
+                                            reparsed = minidom.parseString(rough_string)
+                                            xml_str = reparsed.toprettyxml(indent="    ")
+                                            if xml_str.startswith('<?xml'):
+                                                xml_str = xml_str.split('\n', 1)[1]
+                                                self.metadata.manifest_path.write_text(xml_str)
+                                                self.metadata.update_lock(metadata)
+                                                print(f"✅ Environnement défini sur: {env}")
+                                                print(f"📦 Gestionnaire: {env_config['gestionnaire']}")
+                                                return True
+                except Exception as e:
+                    print(f"❌ Erreur lors de la mise à jour du manifest: {e}")
+                    return False
+                    
+    
     def publish(self, token: str) -> Dict[str, Any]:
         """Publie le package sur StoreApp.TUI"""
         print("📤 Publication en cours...")
