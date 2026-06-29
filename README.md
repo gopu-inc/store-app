@@ -1,3 +1,106 @@
-# browser Reach
+# StoreApp.TUI v2.0
 
-browser Reach - Une application StoreApp.TUI
+> Le Play Store du Terminal — une vraie TUI immersive pour découvrir, télécharger et publier des applications en ligne de commande.
+
+---
+
+## Lancement
+
+```bash
+# Installer les dépendances
+pip install textual httpx rich
+
+# Lancer le client TUI
+cd store && python store.py
+
+# Ou via l'entry-point installé
+store
+```
+
+---
+
+## Fonctionnalités v2.0
+
+| Écran | Ce qui est nouveau |
+|---|---|
+| **Login** | ASCII art banner, inscription + connexion, session persistante (`~/.storeapp/session.json`) |
+| **Accueil** | `DataTable` avec colonnes triables, Featured cards colorées, icônes d'environnement |
+| **Parcourir** | Recherche live avec surlignage des correspondances, `DataTable` riche |
+| **Détail** | Onglets **Info / README / Avis**, rendu Markdown du README, barre de progression téléchargement |
+| **Publier** | Validation fichier en temps réel, feedback visuel, worker async |
+| **Notation** | Dialog modal clavier + souris, labels `★☆`, raccourcis `1–5` |
+| **Commentaire** | Nouveau dialog dédié (bouton 💬 dans Détail) |
+
+### Améliorations transverses
+- **Thème cyberpunk dark** : palette `#0d1117` + accents neon blue/green/purple
+- **`@work(thread=True)`** sur tous les appels API — l'interface ne gèle plus jamais
+- **`self.app.notify()`** — toasts pour succès/erreurs (plus de labels de statut inline)
+- **Client `httpx`** — remplace `requests`, gestion correcte du streaming download
+- **`rate()`** corrigé — la méthode originale avait un bug d'indentation rendant son `try/except` inaccessible
+
+---
+
+## Agent CLI (développeurs)
+
+```bash
+# Initialiser un nouveau projet
+agent init
+
+# Construire le package .tpkg
+agent build
+
+# Publier sur le store
+agent publish
+```
+
+---
+
+## Raccourcis clavier
+
+| Touche | Action |
+|---|---|
+| `Ctrl+H` | Accueil |
+| `Ctrl+B` | Parcourir |
+| `Ctrl+P` | Publier |
+| `Ctrl+Q` | Quitter |
+| `Escape` | Retour / Fermer dialog |
+| `1–5` | Sélectionner une note (dialog de notation) |
+| `F5` | Rafraîchir l'écran courant |
+
+---
+
+## Architecture
+
+```
+store/
+├── app.py              # StoreApp — routage, bindings globaux
+├── api.py              # Client httpx vers l'API Render
+├── config.py           # Config + persistance de session
+├── store.py            # Point d'entrée
+├── styles/
+│   └── app.tcss        # Thème cyberpunk complet (350+ lignes)
+├── screens/
+│   ├── login.py        # Login/signup avec ASCII art
+│   ├── home.py         # Accueil + DataTable + Featured
+│   ├── browse.py       # Recherche live + DataTable
+│   ├── detail.py       # Détail tabbé (Info/README/Avis)
+│   └── publish.py      # Publication .tpkg
+├── widgets/
+│   ├── rating_dialog.py  # Modal notation 1–5 ★
+│   └── comment_dialog.py # Modal commentaire
+└── agent/              # Outils développeur (init/build/publish)
+
+server.py               # Backend FastAPI (déployé sur Render)
+```
+
+---
+
+## Backend
+
+Le serveur (`server.py`) est déployé sur **Render** : `https://storeapp-7mbo.onrender.com`
+
+Pour le lancer localement :
+```bash
+pip install fastapi uvicorn python-jose[cryptography] pillow httpx python-multipart
+GITHUB_TOKEN=ghp_... GITHUB_REPO=owner/repo python server.py
+```

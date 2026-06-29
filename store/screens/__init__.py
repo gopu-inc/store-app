@@ -1,14 +1,14 @@
 # screens/__init__.py
-from .login import LoginScreen
-from .home import HomeScreen
-from .browse import BrowseScreen
-from .detail import DetailScreen
-from .publish import PublishScreen
+from screens.login import LoginScreen
+from screens.home import HomeScreen
+from screens.browse import BrowseScreen
+from screens.detail import DetailScreen
+from screens.publish import PublishScreen
 
 __all__ = [
-    'LoginScreen',
-    'HomeScreen',
-    'BrowseScreen',
-    'DetailScreen',
-    'PublishScreen'
+    "LoginScreen",
+    "HomeScreen",
+    "BrowseScreen",
+    "DetailScreen",
+    "PublishScreen",
 ]

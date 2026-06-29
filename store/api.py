@@ -1,217 +1,214 @@
 # api.py
-"""Client API pour StoreApp.TUI avec support multi-environnements"""
+"""Client API pour StoreApp.TUI — httpx + gestion d'erreurs robuste"""
 
-import requests
-from typing import Optional, Dict, List, Any
+import httpx
+from typing import Optional, Dict, List
 from pathlib import Path
-import xml.etree.ElementTree as ET
+from config import Config
+
 
 class StoreAPI:
     """Client pour l'API StoreApp.TUI"""
-    
-    def __init__(self, base_url: str = "https://storeapp-7mbo.onrender.com"):
-        self.base_url = base_url
-        self.token = None
-        self.username = None
-    
+
+    def __init__(self, base_url: str = None):
+        self.base_url = (base_url or Config.API_BASE_URL).rstrip("/")
+        self.token: Optional[str] = None
+        self.username: Optional[str] = None
+        self._load_session()
+
+    # ── Session ──────────────────────────────────────────────────────────────
+
+    def _load_session(self):
+        session = Config.load_session()
+        if session:
+            self.token = session.get("token")
+            self.username = session.get("username")
+
     def _headers(self) -> Dict[str, str]:
-        """Retourne les headers d'authentification"""
-        headers = {"Content-Type": "application/json"}
+        h = {"Content-Type": "application/json"}
         if self.token:
-            headers["Authorization"] = f"Bearer {self.token}"
-        return headers
-    
+            h["Authorization"] = f"Bearer {self.token}"
+        return h
+
+    # ── Auth ─────────────────────────────────────────────────────────────────
+
     def signup(self, username: str, password: str, email: str = None) -> bool:
-        """Inscription"""
         try:
-            response = requests.post(
+            r = httpx.post(
                 f"{self.base_url}/signup",
                 json={"username": username, "password": password, "email": email},
-                timeout=10
+                timeout=15,
             )
-            return response.status_code == 200
-        except:
+            return r.status_code == 200
+        except Exception:
             return False
-    
+
     def login(self, username: str, password: str) -> bool:
-        """Connexion"""
         try:
-            response = requests.post(
+            r = httpx.post(
                 f"{self.base_url}/login",
                 json={"username": username, "password": password},
-                timeout=10
+                timeout=15,
             )
-            if response.status_code == 200:
-                data = response.json()
+            if r.status_code == 200:
+                data = r.json()
                 self.token = data.get("access_token")
                 self.username = username
+                Config.save_session(username, self.token)
                 return True
-        except:
+        except Exception:
             pass
         return False
-    
+
+    def logout(self):
+        self.token = None
+        self.username = None
+        Config.clear_session()
+
+    # ── Apps ─────────────────────────────────────────────────────────────────
+
     def get_apps(self, limit: int = 50) -> List[Dict]:
-        """Liste les applications"""
         try:
-            response = requests.get(
+            r = httpx.get(
                 f"{self.base_url}/apps",
                 params={"limit": limit},
-                timeout=10
+                timeout=20,
             )
-            if response.status_code == 200:
-                return response.json()
-        except:
+            if r.status_code == 200:
+                return r.json()
+        except Exception:
             pass
         return []
-    
+
     def get_app(self, bundle: str) -> Optional[Dict]:
-        """Récupère les détails d'une application avec métadonnées complètes"""
         try:
-            response = requests.get(
-                f"{self.base_url}/apps/{bundle}",
-                timeout=10
-            )
-            if response.status_code == 200:
-                data = response.json()
-                # Enrichir avec les métadonnées du manifest
-                if data.get('metadata'):
-                    # Récupérer le manifest pour les détails d'environnement
-                    manifest = self.get_manifest(bundle)
-                    if manifest:
-                        data['manifest'] = manifest
-                return data
-        except:
+            r = httpx.get(f"{self.base_url}/apps/{bundle}", timeout=20)
+            if r.status_code == 200:
+                return r.json()
+        except Exception:
             pass
         return None
-    
-    def get_manifest(self, bundle: str) -> Optional[Dict]:
-        """Récupère le manifest.txml d'une application"""
+
+    def get_featured(self) -> List[Dict]:
         try:
-            response = requests.get(
-                f"{self.base_url}/apps/{bundle}/manifest",
-                timeout=10
-            )
-            if response.status_code == 200:
-                return response.json()
-        except:
+            r = httpx.get(f"{self.base_url}/featured", timeout=15)
+            if r.status_code == 200:
+                return r.json()
+        except Exception:
             pass
-        return None
-    
-    def get_lock(self, bundle: str) -> Optional[Dict]:
-        """Récupère le cache.lock.txml d'une application"""
-        try:
-            response = requests.get(
-                f"{self.base_url}/apps/{bundle}/lock",
-                timeout=10
-            )
-            if response.status_code == 200:
-                return response.json()
-        except:
-            pass
-        return None
-    
+        return []
+
     def search(self, query: str) -> List[Dict]:
-        """Recherche des applications"""
         try:
-            response = requests.get(
+            r = httpx.get(
                 f"{self.base_url}/search",
                 params={"q": query},
-                timeout=10
+                timeout=15,
             )
-            if response.status_code == 200:
-                return response.json()
-        except:
+            if r.status_code == 200:
+                return r.json()
+        except Exception:
             pass
         return []
-    
-    def get_featured(self) -> List[Dict]:
-        """Récupère les applications en vedette"""
-        try:
-            response = requests.get(
-                f"{self.base_url}/featured",
-                timeout=10
-            )
-            if response.status_code == 200:
-                return response.json()
-        except:
-            pass
-        return []
-    
-    def download(self, bundle: str, output_path: Path) -> bool:
-        """Télécharge une application"""
-        try:
-            response = requests.get(
-                f"{self.base_url}/download/{bundle}",
-                stream=True,
-                timeout=30
-            )
-            if response.status_code == 200:
-                with open(output_path, 'wb') as f:
-                    for chunk in response.iter_content(chunk_size=8192):
-                        f.write(chunk)
-                return True
-        except:
-            pass
-        return False
-    
-    def publish(self, file_path: Path) -> bool:
-        """Publie une application"""
-        if not self.token:
-            return False
-        
-        try:
-            with open(file_path, 'rb') as f:
-                files = {"file": (file_path.name, f, "application/octet-stream")}
-                data = {"token": self.token}
-                response = requests.post(
-                    f"{self.base_url}/publish",
-                    files=files,
-                    data=data,
-                    timeout=30
-                )
-                return response.status_code == 200
-        except:
-            pass
-        return False
-        
-    def rate(self, bundle: str, rating: int, comment: str = None) -> bool:
-        if not self.token:
-            return False
-            try:
-        # Le backend attend le token en 'data' (Form), pas en Header
-                data = {
-                    "token": self.token,
-                    "rating": rating
-                }
-                if comment:
-                    data["comment"] = comment
-                    response = requests.post(
-                        f"{self.base_url}/rate/{bundle}",
-                        data=data,  # <-- Changé de 'json' à 'data'
-                        timeout=10
-                    )
-                    return response.status_code == 200 
-            except Exception as e:
-                print(f"DEBUG RATE ERROR: {e}")
-                return False
 
-    def comment(self, bundle: str, content: str) -> bool:
-        """Commente une application"""
-        if not self.token:
-            return False
-        
+    # ── Download / Publish ────────────────────────────────────────────────────
+
+    def download(self, bundle: str, output_path: Path) -> bool:
         try:
-            headers = {
-                "Content-Type": "application/json",
-                "Authorization": f"Bearer {self.token}"
-            }
-            response = requests.post(
+            with httpx.stream(
+                "GET", f"{self.base_url}/download/{bundle}", timeout=60
+            ) as r:
+                if r.status_code == 200:
+                    with open(output_path, "wb") as f:
+                        for chunk in r.iter_bytes(chunk_size=8192):
+                            f.write(chunk)
+                    return True
+        except Exception:
+            pass
+        return False
+
+    def publish(self, file_path: Path) -> tuple[bool, str]:
+        """Publie une application. Retourne (success, message)."""
+        if not self.token:
+            return False, "Non authentifié"
+        try:
+            with open(file_path, "rb") as f:
+                r = httpx.post(
+                    f"{self.base_url}/publish",
+                    files={"file": (file_path.name, f, "application/octet-stream")},
+                    data={"token": self.token},
+                    timeout=60,
+                )
+            if r.status_code == 200:
+                data = r.json()
+                return True, data.get("message", "Publié avec succès")
+            try:
+                detail = r.json().get("detail", r.text[:200])
+            except Exception:
+                detail = r.text[:200]
+            return False, detail
+        except Exception as e:
+            return False, str(e)
+
+    # ── Social ────────────────────────────────────────────────────────────────
+
+    def rate(self, bundle: str, rating: int, comment: str = None) -> tuple[bool, str]:
+        """Note une application. Retourne (success, message)."""
+        if not self.token:
+            return False, "Non authentifié"
+        try:
+            data = {"token": self.token, "rating": rating}
+            if comment:
+                data["comment"] = comment
+            r = httpx.post(
+                f"{self.base_url}/rate/{bundle}",
+                data=data,
+                timeout=15,
+            )
+            if r.status_code == 200:
+                return True, "Note envoyée !"
+            try:
+                detail = r.json().get("detail", r.text[:200])
+            except Exception:
+                detail = r.text[:200]
+            return False, detail
+        except Exception as e:
+            return False, str(e)
+
+    def comment(self, bundle: str, content: str) -> tuple[bool, str]:
+        if not self.token:
+            return False, "Non authentifié"
+        try:
+            r = httpx.post(
                 f"{self.base_url}/comment/{bundle}",
                 json={"content": content},
-                headers=headers,
-                timeout=10
+                headers=self._headers(),
+                timeout=15,
             )
-            return response.status_code == 200
-        except:
+            if r.status_code == 200:
+                return True, "Commentaire ajouté"
+            try:
+                detail = r.json().get("detail", r.text[:200])
+            except Exception:
+                detail = r.text[:200]
+            return False, detail
+        except Exception as e:
+            return False, str(e)
+
+    def get_updates(self) -> List[Dict]:
+        try:
+            r = httpx.get(f"{self.base_url}/updates", timeout=15)
+            if r.status_code == 200:
+                return r.json()
+        except Exception:
             pass
-        return False
+        return []
+
+    # ── Status ────────────────────────────────────────────────────────────────
+
+    def ping(self) -> bool:
+        try:
+            r = httpx.get(f"{self.base_url}/", timeout=5)
+            return r.status_code == 200
+        except Exception:
+            return False
