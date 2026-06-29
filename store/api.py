@@ -173,32 +173,30 @@ class StoreAPI:
         except:
             pass
         return False
-    
+        
     def rate(self, bundle: str, rating: int, comment: str = None) -> bool:
-        """Note une application"""
         if not self.token:
             return False
+            try:
+        # Le backend attend le token en 'data' (Form), pas en Header
+                data = {
+                    "token": self.token,
+                    "rating": rating
+                }
+                if comment:
+                    data["comment"] = comment
         
-        try:
-            headers = {
-                "Content-Type": "application/json",
-                "Authorization": f"Bearer {self.token}"
-            }
-            data = {"rating": rating}
-            if comment:
-                data["comment"] = comment
-            
+        # On envoie les données en 'data' pour simuler un Formulaire
             response = requests.post(
                 f"{self.base_url}/rate/{bundle}",
-                json=data,
-                headers=headers,
+                data=data,  # <-- Changé de 'json' à 'data'
                 timeout=10
             )
-            return response.status_code == 200
-        except:
-            pass
-        return False
-    
+            return response.status_code == 200 
+        except Exception as e:
+            print(f"DEBUG RATE ERROR: {e}")
+            return False
+
     def comment(self, bundle: str, content: str) -> bool:
         """Commente une application"""
         if not self.token:
