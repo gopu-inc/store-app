@@ -185,17 +185,15 @@ class StoreAPI:
                 }
                 if comment:
                     data["comment"] = comment
-        
-        # On envoie les données en 'data' pour simuler un Formulaire
-            response = requests.post(
-                f"{self.base_url}/rate/{bundle}",
-                data=data,  # <-- Changé de 'json' à 'data'
-                timeout=10
-            )
-            return response.status_code == 200 
-        except Exception as e:
-            print(f"DEBUG RATE ERROR: {e}")
-            return False
+                    response = requests.post(
+                        f"{self.base_url}/rate/{bundle}",
+                        data=data,  # <-- Changé de 'json' à 'data'
+                        timeout=10
+                    )
+                    return response.status_code == 200 
+            except Exception as e:
+                print(f"DEBUG RATE ERROR: {e}")
+                return False
 
     def comment(self, bundle: str, content: str) -> bool:
         """Commente une application"""
