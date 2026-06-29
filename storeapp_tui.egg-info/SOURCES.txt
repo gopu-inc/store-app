@@ -1,5 +1,6 @@
 LICENSE
 MANIFEST.in
+README.md
 setup.py
 store/__init__.py
 store/agent_cli.py
@@ -21,6 +22,7 @@ store/screens/login.py
 store/screens/publish.py
 store/styles/app.tcss
 store/widgets/__init__.py
+store/widgets/comment_dialog.py
 store/widgets/rating_dialog.py
 storeapp_tui.egg-info/PKG-INFO
 storeapp_tui.egg-info/SOURCES.txt
